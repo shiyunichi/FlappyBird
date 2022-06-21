@@ -7,28 +7,38 @@
 
 import SpriteKit
 
-class GameScene: SKScene {
+class GameScene: SKScene, SKPhysicsContactDelegate{
     
-    var scrolNode:SKNode!
+    var scrollNode:SKNode!
     var wallNode:SKNode!
     var bird:SKSpriteNode!
+    
+    //衝突判定カテゴリー
+    let birdCategory: UInt32 = 1 << 0       //0...00001
+    let groundCategory: UInt32 = 1 << 1     //0...00010
+    let wallCategory: UInt32 = 1 << 2       //0...00100
+    let scoreCategory: UInt32 =  1 << 3     //0...01000
+    
+    //スコア用
+    var score = 0
 
     //SKView上にシーンが表示された時に呼ばれるメソッド
     override func didMove(to view: SKView) {
         
         //重力を設定
         physicsWorld.gravity = CGVector(dx: 0, dy: -4)
+        physicsWorld.contactDelegate = self
         
         //背景色を設定
         backgroundColor = UIColor(red: 0.15, green: 0.75, blue: 0.90, alpha: 1)
         
         //スクロールするスプライトの親ノード
-        scrolNode = SKNode()
-        addChild(scrolNode)
+        scrollNode = SKNode()
+        addChild(scrollNode)
         
         //壁用のノード
         wallNode = SKNode()
-        scrolNode.addChild(wallNode)
+        scrollNode.addChild(wallNode)
         
         //各種スプライトを生成する処理をメソッドに分割
         setupGround()
@@ -72,11 +82,14 @@ class GameScene: SKScene {
             //スプライトに物理体を設定する
             sprite.physicsBody = SKPhysicsBody(rectangleOf: groundTexture.size())
             
+            //衝突のカテゴリー設定
+            sprite.physicsBody?.categoryBitMask = groundCategory
+            
             //衝突の時に動かないように設定する
             sprite.physicsBody?.isDynamic = false
             
             //スプライトを追加する
-            scrolNode.addChild(sprite)
+            scrollNode.addChild(sprite)
             
         }
         
@@ -116,7 +129,7 @@ class GameScene: SKScene {
             sprite.run(repeatScrollCloud)
             
             //スプライトを追加する
-            scrolNode.addChild(sprite)
+            scrollNode.addChild(sprite)
         }
         
     } //setupCloud()
@@ -172,6 +185,7 @@ class GameScene: SKScene {
             
             //下側の壁に物理体を設定する
             under.physicsBody = SKPhysicsBody(rectangleOf: wallTexture.size())
+            under.physicsBody?.categoryBitMask = self.wallCategory
             //衝突時に動かないよう設定する
             under.physicsBody?.isDynamic = false
             
@@ -184,11 +198,22 @@ class GameScene: SKScene {
             
             //上側の壁に物理体を設定する
             upper.physicsBody = SKPhysicsBody(rectangleOf: wallTexture.size())
+            upper.physicsBody?.categoryBitMask = self.wallCategory
             //衝突時に動かないよう設定する
             upper.physicsBody?.isDynamic = false
             
             //壁をまとめるノードに上側の壁を追加
             wall.addChild(upper)
+            
+            //スコアカウント用の透明な壁を作成
+            let scoreNode = SKNode()
+            scoreNode.position = CGPoint(x: upper.size.width + birdSize.width / 2, y: self.frame.height / 2)
+            //透明な壁に物理体を設定する
+            scoreNode.physicsBody = SKPhysicsBody(rectangleOf: CGSize(width: upper.size.width, height: self.frame.size.height))
+            scoreNode.physicsBody?.categoryBitMask = self.scoreCategory
+            scoreNode.physicsBody?.isDynamic = false
+            //壁をまとめるノードに透明な壁を追加
+            wall.addChild(scoreNode)
             
             //壁をまとめるノードにアニメーションを設定
             wall.run(wallAnimation)
@@ -225,6 +250,14 @@ class GameScene: SKScene {
         //物理体を設定
         bird.physicsBody = SKPhysicsBody(circleOfRadius: bird.size.height / 2)
         
+        //カテゴリー設定
+        bird.physicsBody?.categoryBitMask = birdCategory
+        bird.physicsBody?.collisionBitMask = groundCategory | wallCategory
+        bird.physicsBody?.contactTestBitMask = groundCategory | wallCategory | scoreCategory
+        
+        //衝突した時に回転させない
+        bird.physicsBody?.allowsRotation = false
+        
         //アニメーションを設定
         bird.run(flap)
         
@@ -233,13 +266,69 @@ class GameScene: SKScene {
         
     }//setupBird()
     
+    //SKPhysicsContactDelegateのメソッド。衝突した時に呼ばれる
+    func didBegin(_ contact: SKPhysicsContact) {
+        //ゲームオーバーの時には何もしない
+        if scrollNode.speed <= 0{
+            return
+        }
+        
+        if (contact.bodyA.categoryBitMask & scoreCategory) == scoreCategory || (contact.bodyB.categoryBitMask & scoreCategory) == scoreCategory{
+            //スコアカウント用の透明な壁と衝突した
+            print("ScoreUp")
+            score += 1
+        }else{
+            //壁か地面と衝突した
+            print("GameOver")
+            
+            //スクロールを停止させる
+            scrollNode.speed = 0
+            
+            //衝突後は地面と反発するのみとする（リスタートするまで壁と反発させない）
+            bird.physicsBody?.collisionBitMask = groundCategory
+            
+            //衝突後１秒間、鳥をくるくる回転させる
+            let roll = SKAction.rotate(byAngle: CGFloat(Double.pi) * CGFloat(bird.position.y) * 0.01, duration: 1)
+            bird.run(roll, completion: {
+                self.bird.speed = 0
+            })
+        }
+        
+    }//didBegin
+    
+    func restart(){
+        //スコアを０にする
+        score = 0
+        
+        //鳥を初期位置に戻し、壁と地面の両方に反発するように戻す
+        bird.position = CGPoint(x: self.frame.size.width * 0.2, y: self.frame.size.height * 0.7)
+        bird.physicsBody?.velocity = CGVector.zero
+        bird.physicsBody?.collisionBitMask = groundCategory | wallCategory
+        bird.zRotation = 0
+        
+        //全ての壁を取り除く
+        wallNode.removeAllChildren()
+        
+        //鳥の羽ばたきを戻す
+        bird.speed = 1
+        
+        //スクロールを再開させる
+        scrollNode.speed = 1
+        
+    }//restart
+    
     //画面をタップした時に呼ばれる
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        //鳥の速度をゼロにする
-        bird.physicsBody?.velocity = CGVector.zero
+        if scrollNode.speed > 0{
+            
+            //鳥の速度をゼロにする
+            bird.physicsBody?.velocity = CGVector.zero
         
-        //鳥に縦方向の力を与える
-        bird.physicsBody?.applyImpulse(CGVector(dx: 0, dy: 15))
+            //鳥に縦方向の力を与える
+            bird.physicsBody?.applyImpulse(CGVector(dx: 0, dy: 15))
+        }else if bird.speed == 0{
+            restart()
+        }
     }
         
 }
