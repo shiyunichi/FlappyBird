@@ -21,6 +21,9 @@ class GameScene: SKScene, SKPhysicsContactDelegate{
     
     //スコア用
     var score = 0
+    var scoreLabelNode:SKLabelNode!
+    var bestScoreLabelNode:SKLabelNode!
+    let userDefaults:UserDefaults = UserDefaults.standard
 
     //SKView上にシーンが表示された時に呼ばれるメソッド
     override func didMove(to view: SKView) {
@@ -45,6 +48,11 @@ class GameScene: SKScene, SKPhysicsContactDelegate{
         setupCloud()
         setupWall()
         setupBird()
+        
+        //スコア表示ラベルの設定
+        setupScoreLabel()
+    
+        
         
     } //override func didMove
         
@@ -266,6 +274,28 @@ class GameScene: SKScene, SKPhysicsContactDelegate{
         
     }//setupBird()
     
+    func setupScoreLabel(){
+        //スコア表示を作成
+        score = 0
+        scoreLabelNode = SKLabelNode()
+        scoreLabelNode.fontColor = UIColor.black
+        scoreLabelNode.position = CGPoint(x: 10, y: self.frame.size.height - 60)
+        scoreLabelNode.zPosition = 100 //一番手前に表示する
+        scoreLabelNode.horizontalAlignmentMode = SKLabelHorizontalAlignmentMode.left
+        scoreLabelNode.text = "Score\(score)"
+        self.addChild(scoreLabelNode)
+        
+        //ベストスコアを表示
+        let bestScore = userDefaults.integer(forKey: "BEST")
+        bestScoreLabelNode = SKLabelNode()
+        bestScoreLabelNode.fontColor = UIColor.black
+        bestScoreLabelNode.position = CGPoint(x: 10, y: self.frame.height - 90)
+        bestScoreLabelNode.zPosition = 100 //一番手前に表示する
+        bestScoreLabelNode.horizontalAlignmentMode = SKLabelHorizontalAlignmentMode.left
+        bestScoreLabelNode.text = "Best Score:\(bestScore)"
+        self.addChild(bestScoreLabelNode)
+    }
+    
     //SKPhysicsContactDelegateのメソッド。衝突した時に呼ばれる
     func didBegin(_ contact: SKPhysicsContact) {
         //ゲームオーバーの時には何もしない
@@ -277,6 +307,17 @@ class GameScene: SKScene, SKPhysicsContactDelegate{
             //スコアカウント用の透明な壁と衝突した
             print("ScoreUp")
             score += 1
+            scoreLabelNode.text = "Score:\(score)"
+            
+            //ベストスコア更新か確認する
+            var bestScore = userDefaults.integer(forKey: "BEST")
+            if score > bestScore{
+                bestScore = score
+                bestScoreLabelNode.text = "Best Score:\(bestScore)"
+                userDefaults.set(bestScore, forKey: "BEST")
+                userDefaults.synchronize()
+            }
+            
         }else{
             //壁か地面と衝突した
             print("GameOver")
@@ -299,6 +340,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate{
     func restart(){
         //スコアを０にする
         score = 0
+        scoreLabelNode.text = "Score:\(score)"
         
         //鳥を初期位置に戻し、壁と地面の両方に反発するように戻す
         bird.position = CGPoint(x: self.frame.size.width * 0.2, y: self.frame.size.height * 0.7)
