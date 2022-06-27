@@ -11,7 +11,9 @@ class GameScene: SKScene, SKPhysicsContactDelegate{
     
     var scrollNode:SKNode!
     var wallNode:SKNode!
+    var itemNode:SKNode!
     var bird:SKSpriteNode!
+    var buckgroundMusic:SKAudioNode!
     
     //衝突判定カテゴリー
     let birdCategory: UInt32 = 1 << 0       //0...00001
@@ -43,17 +45,25 @@ class GameScene: SKScene, SKPhysicsContactDelegate{
         wallNode = SKNode()
         scrollNode.addChild(wallNode)
         
+        //item用のノード
+        itemNode = SKNode()
+        scrollNode.addChild(itemNode)
+        
         //各種スプライトを生成する処理をメソッドに分割
         setupGround()
         setupCloud()
         setupWall()
+        setupItem()
         setupBird()
         
         //スコア表示ラベルの設定
         setupScoreLabel()
+        
+        //BGMを再生する
+        let buckgroundMusic = SKAudioNode(fileNamed: "BGM11Loop.wav")
+        
+        addChild(buckgroundMusic)
     
-        
-        
     } //override func didMove
         
     func setupGround(){
@@ -240,6 +250,71 @@ class GameScene: SKScene, SKPhysicsContactDelegate{
         
     }//setupWall()
     
+    func setupItem(){
+        
+        //itemの画像を読み込む
+        let itemTexture = SKTexture(imageNamed: "coin")
+        itemTexture.filteringMode = .linear
+        
+        //移動する距離を計算
+        let movingDestance = self.frame.size.width + itemTexture.size().width
+        
+        //画面外まで移動するアクションを作成
+        let moveItem = SKAction.moveBy(x: -movingDestance, y: 0, duration: 4)
+        
+        //自身を取り除くアクションを作詞
+        let removeItem = SKAction.removeFromParent()
+        
+        //2つのアニメーションを順に実行するアクションを作成
+        let itemAnimation =  SKAction.sequence([moveItem, removeItem])
+        
+        let random_y_renge: CGFloat = 100
+        
+        //空の中央位置（y座標）を獲得
+        let groundSize = SKTexture(imageNamed: "ground").size()
+        let sky_center_y = groundSize.height + (self.frame.size.height - groundSize.height) / 2
+        
+        
+        let item_senter_y = sky_center_y - itemTexture.size().height / 2
+        
+        //itemを生成するアクションを作成
+        let createItemAmimation = SKAction.run({
+            let item = SKNode()
+            item.position = CGPoint(x: self.frame.size.width + itemTexture.size().width / 2, y: 0)
+            item.zPosition = -50
+           
+           //y座標の位置をランダムに設定する
+            let random_y = CGFloat.random(in: -random_y_renge...random_y_renge)
+            let item_y = item_senter_y + random_y
+            
+            //壁と壁の間のx座標の距離を算出する
+            let item_x = self.frame.width / 2
+            
+            let coin = SKSpriteNode(texture: itemTexture)
+            coin.position = CGPoint(x: item_x / 2 + 5 , y: item_y)
+            
+            //コインに物理体を設定する
+            coin.physicsBody = SKPhysicsBody(circleOfRadius: coin.size.height / 2)
+            //コインは重力の影響を受けないようにする
+            coin.physicsBody?.affectedByGravity = false
+            
+           print(coin.position)
+            
+            item.addChild(coin)
+            
+            item.run(itemAnimation)
+            
+            self.itemNode.addChild(item)
+        })
+        
+        let waitAnimation = SKAction.wait(forDuration: 2)
+        
+        let repeatForeverAnimation = SKAction.repeatForever(SKAction.sequence([createItemAmimation, waitAnimation]))
+        
+        itemNode.run(repeatForeverAnimation)
+        
+    }
+    
     func setupBird(){
         //鳥の２枚の画像を読み込む
         let birdTextureA = SKTexture(imageNamed: "bird_a")
@@ -350,7 +425,8 @@ class GameScene: SKScene, SKPhysicsContactDelegate{
         
         //全ての壁を取り除く
         wallNode.removeAllChildren()
-        
+        //全てのコインを取り除く
+        itemNode.removeAllChildren()
         //鳥の羽ばたきを戻す
         bird.speed = 1
         
