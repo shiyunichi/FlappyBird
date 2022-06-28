@@ -415,7 +415,8 @@ class GameScene: SKScene, SKPhysicsContactDelegate{
             
         }else if (contact.bodyA.categoryBitMask & itemCategory) == itemCategory || (contact.bodyB.categoryBitMask & itemCategory) == itemCategory {
             
-            
+            contact.bodyA.categoryBitMask = 0
+            contact.bodyB.categoryBitMask = 0
             
             self.removeChildren(in: [itemNode!])
             
