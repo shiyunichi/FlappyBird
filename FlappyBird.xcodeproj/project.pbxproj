@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		213B90E5286B315300CC4A4E /* Coin.wav in Resources */ = {isa = PBXBuildFile; fileRef = 213B90E4286B315300CC4A4E /* Coin.wav */; };
 		2165F7152865DE18009762D6 /* BGM11Loop.wav in Resources */ = {isa = PBXBuildFile; fileRef = 2165F7142865DE18009762D6 /* BGM11Loop.wav */; };
 		21A754C92860AAC100D8D84F /* GameScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21A754C82860AAC100D8D84F /* GameScene.swift */; };
 		21C0B06F285CAA6C0090B7EF /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21C0B06E285CAA6C0090B7EF /* AppDelegate.swift */; };
@@ -18,6 +19,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		213B90E4286B315300CC4A4E /* Coin.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = Coin.wav; sourceTree = "<group>"; };
 		2165F7142865DE18009762D6 /* BGM11Loop.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = BGM11Loop.wav; sourceTree = "<group>"; };
 		21A754C82860AAC100D8D84F /* GameScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameScene.swift; sourceTree = "<group>"; };
 		21C0B06B285CAA6C0090B7EF /* FlappyBird.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FlappyBird.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -65,6 +67,7 @@
 				21C0B072285CAA6C0090B7EF /* ViewController.swift */,
 				21A754C82860AAC100D8D84F /* GameScene.swift */,
 				2165F7142865DE18009762D6 /* BGM11Loop.wav */,
+				213B90E4286B315300CC4A4E /* Coin.wav */,
 				21C0B074285CAA6C0090B7EF /* Main.storyboard */,
 				21C0B077285CAA6D0090B7EF /* Assets.xcassets */,
 				21C0B079285CAA6D0090B7EF /* LaunchScreen.storyboard */,
@@ -132,6 +135,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				21C0B07B285CAA6D0090B7EF /* LaunchScreen.storyboard in Resources */,
+				213B90E5286B315300CC4A4E /* Coin.wav in Resources */,
 				2165F7152865DE18009762D6 /* BGM11Loop.wav in Resources */,
 				21C0B078285CAA6D0090B7EF /* Assets.xcassets in Resources */,
 				21C0B076285CAA6C0090B7EF /* Main.storyboard in Resources */,

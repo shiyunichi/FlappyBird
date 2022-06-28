@@ -20,10 +20,13 @@ class GameScene: SKScene, SKPhysicsContactDelegate{
     let groundCategory: UInt32 = 1 << 1     //0...00010
     let wallCategory: UInt32 = 1 << 2       //0...00100
     let scoreCategory: UInt32 =  1 << 3     //0...01000
+    let itemCategory: UInt32 = 1 << 4       //0...10000
     
     //スコア用
     var score = 0
+    var itemScore = 0
     var scoreLabelNode:SKLabelNode!
+    var itemScoreLabelNode:SKLabelNode!
     var bestScoreLabelNode:SKLabelNode!
     let userDefaults:UserDefaults = UserDefaults.standard
 
@@ -63,6 +66,8 @@ class GameScene: SKScene, SKPhysicsContactDelegate{
         let buckgroundMusic = SKAudioNode(fileNamed: "BGM11Loop.wav")
         
         addChild(buckgroundMusic)
+        
+        
     
     } //override func didMove
         
@@ -262,12 +267,13 @@ class GameScene: SKScene, SKPhysicsContactDelegate{
         //画面外まで移動するアクションを作成
         let moveItem = SKAction.moveBy(x: -movingDestance, y: 0, duration: 4)
         
-        //自身を取り除くアクションを作詞
+        //自身を取り除くアクションを作成
         let removeItem = SKAction.removeFromParent()
         
         //2つのアニメーションを順に実行するアクションを作成
         let itemAnimation =  SKAction.sequence([moveItem, removeItem])
         
+        //item位置の上下の振れ幅の設定
         let random_y_renge: CGFloat = 100
         
         //空の中央位置（y座標）を獲得
@@ -298,7 +304,10 @@ class GameScene: SKScene, SKPhysicsContactDelegate{
             //コインは重力の影響を受けないようにする
             coin.physicsBody?.affectedByGravity = false
             
-           print(coin.position)
+            coin.physicsBody?.categoryBitMask = self.itemCategory
+            coin.physicsBody?.isDynamic = false
+            
+           //print(coin.position)
             
             item.addChild(coin)
             
@@ -335,8 +344,8 @@ class GameScene: SKScene, SKPhysicsContactDelegate{
         
         //カテゴリー設定
         bird.physicsBody?.categoryBitMask = birdCategory
-        bird.physicsBody?.collisionBitMask = groundCategory | wallCategory
-        bird.physicsBody?.contactTestBitMask = groundCategory | wallCategory | scoreCategory
+        bird.physicsBody?.collisionBitMask = groundCategory | wallCategory | itemCategory
+        bird.physicsBody?.contactTestBitMask = groundCategory | wallCategory | scoreCategory | itemCategory
         
         //衝突した時に回転させない
         bird.physicsBody?.allowsRotation = false
@@ -357,14 +366,24 @@ class GameScene: SKScene, SKPhysicsContactDelegate{
         scoreLabelNode.position = CGPoint(x: 10, y: self.frame.size.height - 60)
         scoreLabelNode.zPosition = 100 //一番手前に表示する
         scoreLabelNode.horizontalAlignmentMode = SKLabelHorizontalAlignmentMode.left
-        scoreLabelNode.text = "Score\(score)"
+        scoreLabelNode.text = "Score:\(score)"
         self.addChild(scoreLabelNode)
+        
+        //アイテムスコア表示を作成
+        itemScore = 0
+        itemScoreLabelNode = SKLabelNode()
+        itemScoreLabelNode.fontColor = UIColor.black
+        itemScoreLabelNode.position = CGPoint(x: 10, y: self.frame.size.height - 90)
+        itemScoreLabelNode.zPosition = 100 //一番手前に表示する
+        itemScoreLabelNode.horizontalAlignmentMode = SKLabelHorizontalAlignmentMode.left
+        itemScoreLabelNode.text = "ItemScore:\(itemScore)"
+        self.addChild(itemScoreLabelNode)
         
         //ベストスコアを表示
         let bestScore = userDefaults.integer(forKey: "BEST")
         bestScoreLabelNode = SKLabelNode()
         bestScoreLabelNode.fontColor = UIColor.black
-        bestScoreLabelNode.position = CGPoint(x: 10, y: self.frame.height - 90)
+        bestScoreLabelNode.position = CGPoint(x: 10, y: self.frame.height - 120)
         bestScoreLabelNode.zPosition = 100 //一番手前に表示する
         bestScoreLabelNode.horizontalAlignmentMode = SKLabelHorizontalAlignmentMode.left
         bestScoreLabelNode.text = "Best Score:\(bestScore)"
@@ -378,20 +397,47 @@ class GameScene: SKScene, SKPhysicsContactDelegate{
             return
         }
         
-        if (contact.bodyA.categoryBitMask & scoreCategory) == scoreCategory || (contact.bodyB.categoryBitMask & scoreCategory) == scoreCategory{
+        if (contact.bodyA.categoryBitMask & scoreCategory) == scoreCategory || (contact.bodyB.categoryBitMask & scoreCategory) == scoreCategory {
+           
             //スコアカウント用の透明な壁と衝突した
-            print("ScoreUp")
+            print("--- 隙間通過 ---")
             score += 1
             scoreLabelNode.text = "Score:\(score)"
             
             //ベストスコア更新か確認する
             var bestScore = userDefaults.integer(forKey: "BEST")
-            if score > bestScore{
-                bestScore = score
+            if score + itemScore > bestScore{
+                bestScore = score + itemScore
                 bestScoreLabelNode.text = "Best Score:\(bestScore)"
                 userDefaults.set(bestScore, forKey: "BEST")
                 userDefaults.synchronize()
             }
+            
+        }else if (contact.bodyA.categoryBitMask & itemCategory) == itemCategory || (contact.bodyB.categoryBitMask & itemCategory) == itemCategory {
+            
+            
+            
+            self.removeChildren(in: [itemNode!])
+            
+            //itemと衝突した
+            print("---coinに衝突---")
+            itemScore += 1
+            itemScoreLabelNode.text = "ItemScore:\(itemScore)"
+            
+            
+            //衝突時の効果音を鳴らす
+            let actionSound = SKAction.playSoundFileNamed("Coin.wav", waitForCompletion: true)
+            self.run(actionSound)
+            
+            //ベストスコア更新か確認する
+            var bestScore = userDefaults.integer(forKey: "BEST")
+            if score + itemScore > bestScore{
+                bestScore = score + itemScore
+                bestScoreLabelNode.text = "Best Score:\(bestScore)"
+                userDefaults.set(bestScore, forKey: "BEST")
+                userDefaults.synchronize()
+            }
+            
             
         }else{
             //壁か地面と衝突した
@@ -415,7 +461,9 @@ class GameScene: SKScene, SKPhysicsContactDelegate{
     func restart(){
         //スコアを０にする
         score = 0
+        itemScore = 0
         scoreLabelNode.text = "Score:\(score)"
+        itemScoreLabelNode.text = "ItemScore:\(itemScore)"
         
         //鳥を初期位置に戻し、壁と地面の両方に反発するように戻す
         bird.position = CGPoint(x: self.frame.size.width * 0.2, y: self.frame.size.height * 0.7)
